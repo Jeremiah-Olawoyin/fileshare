@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FileShare Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class", 
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#13a4ec", 
+                        "background-light": "#f6f7f8", 
+                        "background-dark": "#101c22"
+                    }, 
+                    fontFamily: {
+                        display: "Inter"
+                    }, 
+                    borderRadius: {
+                        DEFAULT: "0.5rem", 
+                        lg: "1rem", 
+                        xl: "1.5rem", 
+                        full: "9999px"
+                    }
+                }
+            }
+        };
+    </script>
+<style>
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+</style>
+<script>
+    async function loadFiles() {
+        try {
+            const response = await fetch('http://localhost:3000/files');
+            const files = await response.json();
+
+            const fileContainer = document.getElementById('files');
+            fileContainer.innerHTML = '';
+
+            if (files.length === 0) {
+                fileContainer.innerHTML = '<p class="text-center text-black/60 dark:text-white/60">No files uploaded yet.</p>';
+                return;
+            }
+
+            files.forEach(file => {
+                const uploadTime = new Date(file.uploadTime);
+                const now = new Date();
+                const diffMs = now - uploadTime;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffDays = Math.floor(diffHours / 24);
+
+                let timeString;
+                if (diffHours < 1) {
+                    timeString = 'Just now';
+                } else if (diffHours < 24) {
+                    timeString = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                } else {
+                    timeString = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                }
+
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+
+                // Determine file icon based on extension
+                const extension = file.originalName.split('.').pop().toLowerCase();
+                let icon = 'description';
+                if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(extension)) {
+                    icon = 'image';
+                } else if (['pdf'].includes(extension)) {
+                    icon = 'picture_as_pdf';
+                } else if (['xlsx', 'xls'].includes(extension)) {
+                    icon = 'table_chart';
+                }
+
+                const fileCard = `
+                    <div class="bg-white dark:bg-background-dark rounded-2xl border border-primary/20 dark:border-primary/40 p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-primary text-2xl">${icon}</span>
+                                <div>
+                                    <h3 class="font-semibold text-black dark:text-white">${file.originalName}</h3>
+                                    <p class="text-sm text-black/60 dark:text-white/60">${fileSizeMB} MB • Uploaded ${timeString}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button class="px-3 py-1 rounded-2xl bg-primary/20 text-primary text-sm font-medium hover:bg-primary/30 transition-colors" onclick="downloadFile('${file.id}')">
+                                    <span class="material-symbols-outlined text-sm">download</span>
+                                    Download
+                                </button>
+                                <button class="px-3 py-1 rounded-2xl bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" onclick="shareFile('${file.id}', '${file.originalName}')">
+                                    <span class="material-symbols-outlined text-sm">share</span>
+                                    Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                fileContainer.innerHTML += fileCard;
+            });
+        } catch (error) {
+            console.error('Error loading files:', error);
+            document.getElementById('files').innerHTML = '<p class="text-center text-red-500">Error loading files. Please try again later.</p>';
+        }
+    }
+
+    function downloadFile(fileId) {
+        window.location.href = `http://localhost:3000/download/${fileId}`;
+    }
+
+    function shareFile(fileId, fileName) {
+        const senderEmail = prompt('Enter your email address:');
+        if (!senderEmail) return;
+
+        const recipientEmail = prompt('Enter recipient email address:');
+        if (!recipientEmail) return;
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(senderEmail) || !emailRegex.test(recipientEmail)) {
+            alert('Please enter valid email addresses');
+            return;
+        }
+
+        fetch('http://localhost:3000/send-file', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fileId: fileId,
+                email: senderEmail,
+                recipientEmail: recipientEmail
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert('File sent successfully!');
+            } else {
+                alert('Error: ' + (data.error || 'Failed to send file'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to send file. Please try again.');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFiles();
+        // Refresh files every 30 seconds
+        setInterval(loadFiles, 30000);
+    });
+</script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-black dark:text-white">
+<div class="flex min-h-screen">
+<aside class="w-64 bg-background-light dark:bg-background-dark border-r border-primary/20 dark:border-primary/30 flex flex-col">
+<div class="p-6">
+<h1 class="text-2xl font-bold text-primary">FileShare</h1>
+</div>
+<nav class="flex-grow px-4">
+                <a class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-primary/20 dark:bg-primary/30 text-primary font-bold" href="userdashboard.html">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+                <a class="flex items-center gap-3 px-4 py-2 mt-2 rounded-2xl text-black dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors" href="upload.html">
+<span class="material-symbols-outlined">upload_file</span>
+<span class="font-medium">Upload Files</span>
+</a>
+                <a class="flex items-center gap-3 px-4 py-2 mt-2 rounded-2xl text-black dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors" href="#files">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">folder</span>
+                    <span class="font-medium">My Files</span>
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 mt-2 rounded-2xl text-black dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4">
+</div>
+</aside>
+<main class="flex-1 p-8">
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-4xl font-bold text-black dark:text-white">My Files</h2>
+                <button class="flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-primary text-white font-semibold transition-colors hover:bg-primary/80" onclick="window.location.href='upload.html'">
+<span class="material-symbols-outlined">add</span>
+<span>New Upload</span>
+</button>
+</div>
+<div class="mb-6 flex items-center gap-4">
+<div class="relative flex-grow">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-black/50 dark:text-white/50">search</span>
+<input class="w-full pl-10 pr-4 py-2 rounded-2xl bg-white dark:bg-background-dark border border-primary/20 dark:border-primary/40 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-colors" placeholder="Search files" type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-4 py-2 rounded-2xl bg-primary/20 dark:bg-primary/30 text-primary font-medium">All Files</button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white dark:bg-background-dark border border-primary/20 dark:border-primary/40 font-medium text-black dark:text-white">
+<span>Sort by: Date</span>
+<span class="material-symbols-outlined">arrow_downward</span>
+</button>
+</div>
+</div>
+            <div class="space-y-4" id="files">
+                <!-- Files will be loaded dynamically -->
+            </div>
+</main>
+</div>
+</body>
+</html>

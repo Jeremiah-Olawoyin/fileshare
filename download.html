@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>File Download</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13a4ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101c22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            const progressBar = document.querySelector('.w-full.bg-slate-200');
+            const progressText = document.querySelector('p.text-slate-600');
+
+            downloadBtn.addEventListener('click', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const fileId = urlParams.get('id');
+
+                if (!fileId) {
+                    alert('No file ID provided');
+                    return;
+                }
+
+
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> <span>Downloading...</span>';
+
+                // Simulate progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = progress + '% Complete';
+
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        // Trigger actual download
+                        fetch(`http://localhost:3000/download/${fileId}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Download failed');
+                            }
+                            return response.blob();
+                        })
+                        .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = 'downloaded-file'; // You might want to get the actual filename
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                        })
+                        .catch(error => {
+                            console.error('Download error:', error);
+                            alert('Download failed. Please try again.');
+                            downloadBtn.disabled = false;
+                            downloadBtn.innerHTML = '<span class="material-symbols-outlined">download</span> <span>Download Now</span>';
+                        });
+
+                        downloadBtn.innerHTML = '<span class="material-symbols-outlined">check</span> <span>Download Complete</span>';
+                        setTimeout(() => {
+                            window.location.href = 'userdashboard.html';
+                        }, 2000);
+                    }
+                }, 200);
+            });
+        });
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200">
+    <main class="flex flex-col items-center justify-center min-h-screen p-4">
+        <div class="w-full max-w-lg mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/20 text-primary font-medium hover:bg-primary/30 transition-colors" onclick="window.location.href='userdashboard.html'">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span>Back to Dashboard</span>
+                </button>
+                <svg class="h-10 w-auto text-slate-800 dark:text-white" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path>
+                </svg>
+            </div>
+            <div class="bg-white dark:bg-background-dark rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-8 text-center">
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Project Proposal</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Size: 15 MB</p>
+                    <p class="text-slate-600 dark:text-slate-300 mt-4 text-base">
+                        This document contains the project proposal for the upcoming marketing campaign. Please review and provide feedback by the deadline.
+                    </p>
+                </div>
+                <div class="mb-6">
+                    <button id="downloadBtn" class="w-full flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+                        <span class="material-symbols-outlined">download</span>
+                        <span>Download Now</span>
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-sm font-medium text-slate-600 dark:text-slate-400">
+                        <p>Downloading...</p>
+                        <p>45% Complete</p>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
+                        <div class="bg-primary h-2.5 rounded-full" style="width: 45%"></div>
+                    </div>
+                </div>
+            </div>
+            <p class="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
+                Securely shared via YourPlatformName
+            </p>
+        </div>
+    </main>
+</body>
+</html>

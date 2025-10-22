@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FileShare Upload</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#13a4ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101c22"
+                    },
+                    fontFamily: {
+                        display: "Inter"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+    <script>
+        let selectedFiles = [];
+
+        function handleFileSelect(event) {
+            selectedFiles = Array.from(event.target.files);
+            updateFileList();
+        }
+
+        function updateFileList() {
+            const progressDiv = document.querySelector('.space-y-4');
+            const uploadButton = document.querySelector('button:disabled');
+
+            if (selectedFiles.length > 0) {
+                progressDiv.innerHTML = selectedFiles.map((file, index) => `
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-black dark:text-white">${file.name}</span>
+                        <span class="text-sm text-black/60 dark:text-white/60">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%" id="progress-${index}"></div>
+                    </div>
+                `).join('');
+                uploadButton.disabled = false;
+                uploadButton.innerHTML = '<span class="material-symbols-outlined">upload</span> Upload Files';
+            } else {
+                progressDiv.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-black dark:text-white">No files selected</span>
+                        <span class="text-sm text-black/60 dark:text-white/60">Ready to upload</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                `;
+                uploadButton.disabled = true;
+                uploadButton.innerHTML = '<span class="material-symbols-outlined">upload</span> Upload Files';
+            }
+        }
+
+        async function uploadFiles() {
+            const uploadButton = document.getElementById('uploadBtn');
+            uploadButton.disabled = true;
+            uploadButton.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> Uploading...';
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('http://localhost:3000/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const progressBar = document.getElementById(`progress-${i}`);
+                        if (progressBar) {
+                            progressBar.style.width = '100%';
+                        }
+                    } else {
+                        console.error('Upload failed for', file.name);
+                        alert(`Upload failed for ${file.name}. Please try again.`);
+                    }
+                } catch (error) {
+                    console.error('Error uploading', file.name, error);
+                    alert(`Error uploading ${file.name}: ${error.message}`);
+                }
+            }
+
+            uploadButton.innerHTML = '<span class="material-symbols-outlined">check</span> Upload Complete';
+            setTimeout(() => {
+                window.location.href = 'userdashboard.html';
+            }, 2000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+            document.getElementById('uploadBtn').addEventListener('click', uploadFiles);
+        });
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-black dark:text-white">
+    <div class="flex min-h-screen">
+        <aside class="w-64 bg-background-light dark:bg-background-dark border-r border-primary/20 dark:border-primary/30 flex flex-col">
+            <div class="p-6">
+                <h1 class="text-2xl font-bold text-primary">FileShare</h1>
+            </div>
+            <nav class="flex-grow px-4">
+                <a class="flex items-center gap-3 px-4 py-2 rounded-lg text-black dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors" href="userdashboard.html">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="font-medium">Dashboard</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-2 mt-2 rounded-lg bg-primary/20 dark:bg-primary/30 text-primary font-bold" href="upload.html">
+                    <span class="material-symbols-outlined">upload_file</span>
+                    <span class="font-medium">Upload Files</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-2 mt-2 rounded-lg text-black dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors" href="userdashboard.html">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">folder</span>
+                    <span class="font-medium">My Files</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-2 mt-2 rounded-lg text-black dark:text-white hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors" href="#">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span class="font-medium">Settings</span>
+                </a>
+            </nav>
+        </aside>
+        <main class="flex-1 p-8">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-4xl font-bold text-black dark:text-white">Upload Files</h2>
+                <button class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-500 text-white font-semibold transition-colors hover:bg-gray-600" onclick="window.location.href='userdashboard.html'">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span>Back to Dashboard</span>
+                </button>
+            </div>
+            <div class="mb-6">
+                <div class="bg-white dark:bg-background-dark rounded-xl border border-primary/20 dark:border-primary/40 p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-black dark:text-white">Select Files to Upload</h3>
+                    <div class="border-2 border-dashed border-primary/30 dark:border-primary/50 rounded-2xl p-8 text-center hover:border-primary/50 dark:hover:border-primary/70 transition-colors">
+                        <span class="material-symbols-outlined text-4xl text-primary mb-4 block">cloud_upload</span>
+                        <p class="text-black/60 dark:text-white/60 mb-4">Drag and drop files here or click to browse</p>
+                        <input type="file" multiple class="hidden" id="fileInput"/>
+                        <button class="bg-primary text-white px-6 py-2 rounded-2xl font-medium hover:bg-primary/80 transition-colors" onclick="document.getElementById('fileInput').click()">
+                            Browse Files
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-background-dark rounded-xl border border-primary/20 dark:border-primary/40 p-6">
+                <h3 class="text-lg font-semibold mb-4 text-black dark:text-white">Upload Progress</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-black dark:text-white">No files selected</span>
+                        <span class="text-sm text-black/60 dark:text-white/60">Ready to upload</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <button id="uploadBtn" class="w-full mt-6 bg-primary text-white py-3 px-4 rounded-2xl font-medium hover:bg-primary/80 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    <span class="material-symbols-outlined">upload</span>
+                    Upload Files
+                </button>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
