@@ -86,6 +86,9 @@ Thumbs.db
 uploads/
 *.tmp
 
+# Persisted metadata
+data/
+
 # IDE files
 .vscode/
 .idea/
